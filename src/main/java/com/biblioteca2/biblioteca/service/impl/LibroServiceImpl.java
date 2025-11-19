@@ -4,6 +4,7 @@ import com.biblioteca2.biblioteca.model.Libro;
 import com.biblioteca2.biblioteca.repository.LibroRepository;
 import com.biblioteca2.biblioteca.service.LibroService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,9 +18,13 @@ public class LibroServiceImpl implements LibroService {
 
     private final LibroRepository libroRepository;
 
+    private final SimpMessagingTemplate messagingTemplate;
+
     @Override
     public Libro crearLibro(Libro libro) {
-        return libroRepository.save(libro);
+        Libro l = libroRepository.save(libro);
+        messagingTemplate.convertAndSend("/topic/libros", l);
+        return l;
     }
 
     @Override
@@ -35,12 +40,15 @@ public class LibroServiceImpl implements LibroService {
     @Override
     public Libro actualizarLibro(Long id, Libro libro) {
         libro.setId(id);
-        return libroRepository.save(libro);
+        Libro l = libroRepository.save(libro);
+        messagingTemplate.convertAndSend("/topic/libros", l);
+        return l;
     }
 
     @Override
     public void eliminarLibro(Long id) {
         libroRepository.deleteById(id);
+        messagingTemplate.convertAndSend("/topic/libros", new Libro(id));
     }
 
     @Override
@@ -48,16 +56,26 @@ public class LibroServiceImpl implements LibroService {
         if (file.isEmpty()) return null;
 
         try {
-            String carpeta = "uploads/"; // carpeta local para almacenar portadas
+            String carpeta = "uploads/";
             File directorio = new File(carpeta);
             if (!directorio.exists()) directorio.mkdirs();
 
             String ruta = carpeta + file.getOriginalFilename();
             file.transferTo(new File(ruta));
-            return ruta; // retorna la ruta donde se guardó la portada
+            return ruta;
         } catch (IOException e) {
             e.printStackTrace();
             return null;
         }
+    }
+
+    @Override
+    public Libro prestar(Long id) {
+        Libro libro = libroRepository.findById(id).orElseThrow();
+        if (!libro.isDisponible()) throw new RuntimeException("Libro no disponible");
+        libro.setDisponible(false);
+        libroRepository.save(libro);
+        messagingTemplate.convertAndSend("/topic/libros", libro);
+        return libro;
     }
 }

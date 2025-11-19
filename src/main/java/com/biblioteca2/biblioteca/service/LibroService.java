@@ -17,5 +17,7 @@ public interface LibroService {
 
     void eliminarLibro(Long id);
 
+    Libro prestar(Long id);
+
     String subirPortada(MultipartFile file);
 }
