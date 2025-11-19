@@ -1,41 +1,30 @@
 package com.biblioteca2.biblioteca.service.impl;
 
-import com.biblioteca2.biblioteca.model.Autor;
 import com.biblioteca2.biblioteca.model.Libro;
-import com.biblioteca2.biblioteca.repository.AutorRepository;
 import com.biblioteca2.biblioteca.repository.LibroRepository;
 import com.biblioteca2.biblioteca.service.LibroService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class LibroServiceImpl implements LibroService {
 
     private final LibroRepository libroRepository;
-    private final AutorRepository autorRepository;
-
-    public LibroServiceImpl(LibroRepository libroRepository, AutorRepository autorRepository) {
-        this.libroRepository = libroRepository;
-        this.autorRepository = autorRepository;
-    }
 
     @Override
     public Libro crearLibro(Libro libro) {
-
-        // Validar que el autor exista antes de asignarlo
-        Autor autor = autorRepository.findById(libro.getAutor().getId())
-                .orElseThrow(() -> new RuntimeException("Autor no encontrado"));
-
-        libro.setAutor(autor);
-
         return libroRepository.save(libro);
     }
 
     @Override
     public Libro obtenerPorId(Long id) {
-        return libroRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Libro no encontrado con id: " + id));
+        return libroRepository.findById(id).orElse(null);
     }
 
     @Override
@@ -45,21 +34,30 @@ public class LibroServiceImpl implements LibroService {
 
     @Override
     public Libro actualizarLibro(Long id, Libro libro) {
-        Libro existente = obtenerPorId(id);
-
-        existente.setTitulo(libro.getTitulo());
-        existente.setIsbn(libro.getIsbn());
-        existente.setAnio(libro.getAnio());
-
-        Autor autor = autorRepository.findById(libro.getAutor().getId())
-                .orElseThrow(() -> new RuntimeException("Autor no encontrado"));
-        existente.setAutor(autor);
-
-        return libroRepository.save(existente);
+        libro.setId(id);
+        return libroRepository.save(libro);
     }
 
     @Override
     public void eliminarLibro(Long id) {
         libroRepository.deleteById(id);
+    }
+
+    @Override
+    public String subirPortada(MultipartFile file) {
+        if (file.isEmpty()) return null;
+
+        try {
+            String carpeta = "uploads/"; // carpeta local para almacenar portadas
+            File directorio = new File(carpeta);
+            if (!directorio.exists()) directorio.mkdirs();
+
+            String ruta = carpeta + file.getOriginalFilename();
+            file.transferTo(new File(ruta));
+            return ruta; // retorna la ruta donde se guardó la portada
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
