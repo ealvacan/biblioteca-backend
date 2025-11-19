@@ -3,7 +3,7 @@ FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
 
 # Copiar todo el proyecto
-COPY . .
+COPY src/main/java/com/biblioteca2/biblioteca .
 
 # Construir jar
 RUN mvn -q -e -DskipTests clean package
