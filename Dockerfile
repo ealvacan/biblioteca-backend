@@ -1,20 +1,29 @@
-# Etapa 1: Construir la app con Maven Wrapper
+# --------- Etapa 1: Build ---------
 FROM maven:3.9.6-eclipse-temurin-17 AS build
+
 WORKDIR /app
 
-# Copiar todo el proyecto
-COPY src/main/java/com/biblioteca2/biblioteca .
+# Copiar pom.xml y resolver dependencias
+COPY pom.xml .
+RUN mvn -q dependency:go-offline
 
-# Construir jar
-RUN mvn -q -e -DskipTests clean package
+# Copiar el código fuente
+COPY src ./src
 
-# Etapa 2: Runtime (ejecutar el jar)
+# Construir el JAR
+RUN mvn -q -DskipTests package
+
+
+# --------- Etapa 2: Runtime ---------
 FROM eclipse-temurin:17-jdk
+
 WORKDIR /app
 
-# Copiar jar generado
+# Copiar el JAR generado
 COPY --from=build /app/target/*.jar app.jar
 
+# Exponer puerto
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Comando de inicio
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
